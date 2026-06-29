@@ -132,6 +132,16 @@ class SpotifyClient:
                 f"Spotify token not found at {token_file}.  "
                 "Run 'zymphony auth' first."
             )
+        # Verify readability before handing to spotipy; an unreadable token
+        # causes spotipy to silently fall back to interactive auth (which fails
+        # in a headless container).
+        try:
+            token_file.read_text()
+        except OSError as exc:
+            raise PermissionError(
+                f"Cannot read Spotify token at {token_file}: {exc}.  "
+                "Check that the file is owned by the service user (PUID/PGID)."
+            ) from exc
         self._sp = spotipy.Spotify(auth_manager=_make_oauth(config))
 
     def get_playlist_info(self, playlist_id: str) -> PlaylistInfo:

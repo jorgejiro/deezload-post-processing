@@ -16,7 +16,9 @@ if [ "$current_uid" != "$PUID" ]; then
     usermod -o -u "$PUID" app
 fi
 
-# /config must be writable (Spotify token, processed-IDs log)
-chown app:app /config
+# /config must be writable (Spotify token, processed-IDs log).
+# Recursive so existing files (e.g. token written by a previous auth run with a
+# different PUID) are always owned by the current app user.
+chown -R app:app /config
 
 exec gosu app "$@"
