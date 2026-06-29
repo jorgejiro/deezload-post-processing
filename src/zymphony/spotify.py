@@ -148,15 +148,19 @@ class SpotifyClient:
     def get_playlist_info(self, playlist_id: str) -> PlaylistInfo:
         """Return name and highest-resolution cover URL for *playlist_id*.
 
-        Falls back to (playlist_id, no cover) when the API returns 404.  This
-        happens with Spotify-generated algorithmic playlists (Discover Weekly,
-        Daily Mix, etc.) and with playlists that belong to a different account.
+        Uses two separate API calls to avoid spotipy's automatic
+        ``additional_types=track`` parameter, which causes 404 on Spotify
+        editorial/regional playlists (e.g. "Los 90 España").
+
+        Falls back to (playlist_id, no cover) only when the name endpoint
+        returns 404, which happens with algorithmic playlists (Discover Weekly,
+        Daily Mix) or playlists owned by a different account.
         """
+        # --- name -------------------------------------------------------
         try:
-            # market="from_token" makes Spotify use the country of the
-            # authenticated account, which is required for editorial/regional
-            # playlists (e.g. "Los 90 España") that return 404 without it.
-            data = self._sp.playlist(playlist_id, fields="name,images", market="from_token")
+            # _get bypasses spotipy's playlist() wrapper so we control the
+            # exact query parameters and avoid the unwanted additional_types.
+            data = self._sp._get(f"playlists/{playlist_id}", fields="name")
         except SpotifyException as exc:
             if exc.http_status == 404:
                 log.warning(
@@ -169,9 +173,19 @@ class SpotifyClient:
                 return PlaylistInfo(name=playlist_id, cover_url=None)
             raise
         name: str = data["name"]
-        images: list = data.get("images") or []
-        # Spotify returns images sorted largest first.
-        cover_url = images[0]["url"] if images else None
+
+        # --- cover ------------------------------------------------------
+        cover_url: str | None = None
+        try:
+            images: list = self._sp.playlist_cover_image(playlist_id) or []
+            # Spotify returns images sorted largest first.
+            cover_url = images[0]["url"] if images else None
+        except SpotifyException as exc:
+            log.warning(
+                "Could not fetch cover for playlist %s (%s) — skipping.",
+                playlist_id, exc,
+            )
+
         return PlaylistInfo(name=name, cover_url=cover_url)
 
     def download_cover(self, cover_url: str) -> bytes:
