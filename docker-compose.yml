@@ -1,0 +1,31 @@
+services:
+  deezload-post:
+    image: ghcr.io/youruser/deezload-post-processing:latest
+    # build: .    # uncomment to build from source instead of pulling the image
+    container_name: deezload-post
+    environment:
+      # --- Permissions ---
+      - PUID=1000          # UID of the user that owns the music library
+      - PGID=1000          # GID of the user that owns the music library
+      - TZ=Europe/Madrid
+
+      # --- Spotify (required) ---
+      - SPOTIFY_CLIENT_ID=           # from developer.spotify.com/dashboard
+      - SPOTIFY_CLIENT_SECRET=       # from developer.spotify.com/dashboard
+      - SPOTIFY_REDIRECT_URI=http://localhost:8888/callback
+
+      # --- Tuning (optional, shown with defaults) ---
+      - SCAN_INTERVAL_SECONDS=60     # how often to check /input for new ZIPs
+      - STABLE_MINUTES=5             # min minutes a file must be unchanged before processing
+      - PART_SIZE_THRESHOLD_MB=1000  # full-part size threshold (MB)
+      - MIN_TOTAL_SIZE_MB=100        # minimum total group size to consider (MB)
+      - ALBUM_ARTIST=Various Artists # albumartist tag written to every track
+      - DELETE_ZIPS_AFTER=true       # delete source ZIPs after successful processing
+      - LOG_LEVEL=INFO
+
+    volumes:
+      - /path/to/downloads:/input    # directory where Deezloader drops ZIP files
+      - /path/to/music:/output       # Navidrome music library root
+      - /path/to/config:/config      # persistent: Spotify token + state
+
+    restart: unless-stopped

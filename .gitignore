@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Ruff / Black cache
+.ruff_cache/
+
+# Secrets and local config
+.env
+.env.*
+config/
+/config/
+*.token
+*.refresh_token
+spotify_token.json
+token.json
+
+# Large test fixtures (no real audio or ZIPs in the repo)
+tests/fixtures/*.zip
+tests/fixtures/*.mp3
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude Code
+.claude/
