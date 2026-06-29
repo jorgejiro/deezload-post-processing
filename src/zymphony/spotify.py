@@ -153,14 +153,17 @@ class SpotifyClient:
         Daily Mix, etc.) and with playlists that belong to a different account.
         """
         try:
-            data = self._sp.playlist(playlist_id, fields="name,images")
+            # market="from_token" makes Spotify use the country of the
+            # authenticated account, which is required for editorial/regional
+            # playlists (e.g. "Los 90 España") that return 404 without it.
+            data = self._sp.playlist(playlist_id, fields="name,images", market="from_token")
         except SpotifyException as exc:
             if exc.http_status == 404:
                 log.warning(
                     "Spotify API returned 404 for playlist %s — "
-                    "this is common for algorithmic playlists (Discover Weekly, "
-                    "Daily Mix) or playlists owned by a different account.  "
-                    "Using playlist ID as album name and skipping cover art.",
+                    "using playlist ID as album name and skipping cover art.  "
+                    "This can happen with algorithmic playlists (Discover Weekly, "
+                    "Daily Mix) or playlists owned by a different account.",
                     playlist_id,
                 )
                 return PlaylistInfo(name=playlist_id, cover_url=None)
