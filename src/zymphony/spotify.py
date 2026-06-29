@@ -10,6 +10,7 @@ from threading import Event
 
 import requests
 import spotipy
+from spotipy.exceptions import SpotifyException
 from spotipy.oauth2 import CacheFileHandler, SpotifyOAuth
 
 log = logging.getLogger(__name__)
@@ -145,8 +146,25 @@ class SpotifyClient:
         self._sp = spotipy.Spotify(auth_manager=_make_oauth(config))
 
     def get_playlist_info(self, playlist_id: str) -> PlaylistInfo:
-        """Return name and highest-resolution cover URL for *playlist_id*."""
-        data = self._sp.playlist(playlist_id, fields="name,images")
+        """Return name and highest-resolution cover URL for *playlist_id*.
+
+        Falls back to (playlist_id, no cover) when the API returns 404.  This
+        happens with Spotify-generated algorithmic playlists (Discover Weekly,
+        Daily Mix, etc.) and with playlists that belong to a different account.
+        """
+        try:
+            data = self._sp.playlist(playlist_id, fields="name,images")
+        except SpotifyException as exc:
+            if exc.http_status == 404:
+                log.warning(
+                    "Spotify API returned 404 for playlist %s — "
+                    "this is common for algorithmic playlists (Discover Weekly, "
+                    "Daily Mix) or playlists owned by a different account.  "
+                    "Using playlist ID as album name and skipping cover art.",
+                    playlist_id,
+                )
+                return PlaylistInfo(name=playlist_id, cover_url=None)
+            raise
         name: str = data["name"]
         images: list = data.get("images") or []
         # Spotify returns images sorted largest first.
